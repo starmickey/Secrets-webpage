@@ -20,15 +20,11 @@ app.get('/', function (req, res) {
     res.render('home');
 });
 
-app.get('/login', function (req, res) {
-    res.render('login');
-});
-
 app.route('/register')
     .get(function (req, res) {
         res.render('register');
     })
-    
+
     .post(function (req, res) {
         mongooseInterface.registerUser(req.body.username, req.body.password)
             .then(
@@ -41,6 +37,25 @@ app.route('/register')
                 }
             )
     });
+
+app.route('/login')
+    .get(function (req, res) {
+        res.render('login');
+    })
+    .post(function (req, res) {
+        mongooseInterface.login(req.body.username, req.body.password)
+            .then(
+                function onfullfilled(value) {
+                    res.render('secrets');
+                },
+                function onrejected(reason) {
+                    console.log(reason);
+                    res.render('register');
+                }
+            )
+    });
+
+
 
 
 /* ============ PORT LISTENER ============ */

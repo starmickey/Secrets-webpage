@@ -45,8 +45,29 @@ exports.registerUser = function (email, password) {
             function onrejected(reason) {
                 reject(reason);
             }
-            
+
         )
         
+    })
+}
+
+
+exports.login = function (username, password) {
+    
+    return new Promise((resolve, reject) => {
+        
+        User.findOne({email: username, password: password}, function (error, user) {
+            if(error){
+                reject(error);
+
+            } else if (username) {
+                reject('user not found');
+
+            } else {
+                resolve('success');
+                
+            }
+        })
+
     })
 }
