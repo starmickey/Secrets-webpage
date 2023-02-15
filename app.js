@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const mongoose = require(__dirname + '/mongoose.js')
+const mongooseInterface = require(__dirname + '/mongoose.js')
 
 
 
@@ -9,29 +9,43 @@ const mongoose = require(__dirname + '/mongoose.js')
 const app = express();
 
 app.use(express.static('public'));
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.set('view engine', 'ejs');
 
 
 /* ========= HTTP REQUESTS' HANDLERS ========= */
 
-app.get('/', function(req, res){
+app.get('/', function (req, res) {
     res.render('home');
 });
 
-app.get('/login', function(req, res){
+app.get('/login', function (req, res) {
     res.render('login');
 });
 
-app.get('/register', function(req, res){
-    res.render('register');
-});
+app.route('/register')
+    .get(function (req, res) {
+        res.render('register');
+    })
+    
+    .post(function (req, res) {
+        mongooseInterface.registerUser(req.body.username, req.body.password)
+            .then(
+                function onfullfilled(value) {
+                    res.render('secrets');
+                },
+                function onrejected(reason) {
+                    console.log(reason);
+                    res.render('register');
+                }
+            )
+    });
 
 
 /* ============ PORT LISTENER ============ */
 
-app.listen(process.env.PORT || 3000, function(){
+app.listen(process.env.PORT || 3000, function () {
     console.log('Server is running');
 })
 
