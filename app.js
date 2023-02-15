@@ -50,7 +50,7 @@ app.route('/login')
                 },
                 function onrejected(reason) {
                     console.log(reason);
-                    res.render('register');
+                    res.render('login');
                 }
             )
     });

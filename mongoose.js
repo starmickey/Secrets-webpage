@@ -26,8 +26,10 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-const secret = process.env.ECRYPTION_STRING;
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
+userSchema.plugin(encrypt, {
+    secret: process.env.ECRYPTION_STRING,
+    encryptedFields: ['password']
+});
 
 const User = mongoose.model('user', userSchema);
 
@@ -62,12 +64,15 @@ exports.login = function (username, password) {
     
     return new Promise((resolve, reject) => {
         
-        User.findOne({email: username, password: password}, function (error, user) {
+        User.findOne({email: username}, function (error, user) {
             if(error){
                 reject(error);
 
-            } else if (username) {
+            } else if (!user) {
                 reject('user not found');
+
+            } else if (user.password !== password) {
+                reject('password incorrect');
 
             } else {
                 resolve('success');
