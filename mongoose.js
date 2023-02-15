@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const encrypt = require('mongoose-encryption');
-
+const md5 = require('md5');
+ 
 
 // ================ CONNECT TO MONGOOSE ================
 
@@ -26,11 +26,6 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-userSchema.plugin(encrypt, {
-    secret: process.env.ECRYPTION_STRING,
-    encryptedFields: ['password']
-});
-
 const User = mongoose.model('user', userSchema);
 
 
@@ -43,7 +38,7 @@ exports.registerUser = function (email, password) {
         
         const newUser = new User({
             email: email,
-            password: password
+            password: md5(password)
         })
 
         newUser.save().then(
@@ -71,7 +66,7 @@ exports.login = function (username, password) {
             } else if (!user) {
                 reject('user not found');
 
-            } else if (user.password !== password) {
+            } else if (user.password !== md5(password)) {
                 reject('password incorrect');
 
             } else {
