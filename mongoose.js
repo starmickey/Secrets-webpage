@@ -1,4 +1,7 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
+const encrypt = require('mongoose-encryption');
+
 
 // ================ CONNECT TO MONGOOSE ================
 
@@ -22,6 +25,9 @@ const userSchema = new mongoose.Schema({
         required: true
     }
 });
+
+const secret = process.env.ECRYPTION_STRING;
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
 
 const User = mongoose.model('user', userSchema);
 
@@ -65,7 +71,7 @@ exports.login = function (username, password) {
 
             } else {
                 resolve('success');
-                
+
             }
         })
 

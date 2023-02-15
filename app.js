@@ -1,6 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const mongooseInterface = require(__dirname + '/mongoose.js')
+const mongooseInterface = require(__dirname + '/mongoose.js');
 
 
 
