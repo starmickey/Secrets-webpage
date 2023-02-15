@@ -1,6 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 5;
  
 
 // ================ CONNECT TO MONGOOSE ================
@@ -35,21 +36,31 @@ const User = mongoose.model('user', userSchema);
 exports.registerUser = function (email, password) {
     
     return new Promise((resolve, reject) => {
+
+        bcrypt.hash(password, saltRounds, function(err, securePassword) {
+
+            if (err) {
+                reject(err);
+                
+            } else {
+                const newUser = new User({
+                    email: email,
+                    password: securePassword
+                })
         
-        const newUser = new User({
-            email: email,
-            password: md5(password)
-        })
-
-        newUser.save().then(
-            function onfullfilled(user) {
-                resolve('success');
-            },
-            function onrejected(reason) {
-                reject(reason);
+                newUser.save().then(
+                    function onfullfilled(user) {
+                        resolve('success');
+                    },
+                    function onrejected(reason) {
+                        reject(reason);
+                    }
+        
+                )
+                
             }
-
-        )
+        });
+        
         
     })
 }
@@ -66,12 +77,16 @@ exports.login = function (username, password) {
             } else if (!user) {
                 reject('user not found');
 
-            } else if (user.password !== md5(password)) {
-                reject('password incorrect');
-
             } else {
-                resolve('success');
-
+                bcrypt.compare(password, user.password, function(err, result) {
+                    if(err) {
+                        reject(err);
+                    } else if (!result) {
+                        reject('password incorrect');
+                    } else {
+                        resolve('log in successfull');
+                    }
+                });
             }
         })
 
