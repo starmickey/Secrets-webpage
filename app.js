@@ -1,4 +1,4 @@
-// ================== IMPORT MODULES ==================
+/* ================== IMPORT MODULES ================== */
 
 require('dotenv').config();
 const express = require('express');
@@ -12,7 +12,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
 
-// ================ CONFIG EXPRESS APP ================ 
+/* ================ CONFIG EXPRESS APP ================  */
 
 const app = express();
 
@@ -22,7 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.set('view engine', 'ejs');
 
 
-// -------- Make app use passport's session cookies --------
+/* ------ Make app use passport's session cookies ------ */
 
 app.use(session({
     secret: 'keyboard cat',
@@ -36,7 +36,7 @@ app.use(passport.session());
 
 
 
-// ============= START MONGOOSE CONNECTION =============
+/* ============= START MONGOOSE CONNECTION ============= */
 
 startMongooseConnection().catch(err => console.log(err));
 
@@ -46,15 +46,16 @@ async function startMongooseConnection() {
 }
 
 
-// -------------- Create Models and Schemas --------------
+/* -------------- Create Models and Schemas -------------- */
 
 const userSchema = new mongoose.Schema({
     googleId: String,
+    // active attribute is false if the account has been disabled
     active: Boolean
 });
 
 
-// ----------------- Schema configuration -----------------
+/* ----------------- Schema configuration ----------------- */
 
 userSchema.plugin(passportLocalMongoose, {
     // Set usernameUnique to false to avoid a mongodb index on the username column!
@@ -70,30 +71,34 @@ userSchema.plugin(passportLocalMongoose, {
 userSchema.plugin(findOrCreate);
 
 
-// ------------------ Create Schema Model ------------------
+
+/* ----------------- Create Schema Model ----------------- */
 
 const User = mongoose.model('user', userSchema);
 
 
-//  ----- Fill passport functions' stack for user sessions ----- 
 
+/* ----- Fill passport functions stack for user sessions -----  */
 
 passport.use(User.createStrategy());
 
-//  NOTES:
-//  Indicate passport which functions it must call to manage sessions
 
-//  SerializeUser function is used to save user data in some passport session.
-//  This is done when an user logs in.
-//  We can use the argument function to set which user data will be saved.
+/*  
+ NOTES:
+ Below we indicate passport which functions it must call to manage sessions.
+
+ SerializeUser function saves user data in some passport session. This happens when
+ an user logs in. We can use the argument function to set which user data will be saved.
+
+ DeserializeUser function is executed in every authentication. It retrieves the user data
+ saved in the passport's session. The callback function must be consistent with the one
+ of SerializeUser, because we must retrieve the same data that we saved.
+ */
+
 passport.serializeUser(function (user, done) {
     done(null, user.id);
 });
 
-//  DeserializeUser function is executed in every authentication.
-//  It retrieves the user data saved in the session.
-//  Argument function is set according to the one of serializeUser, so the
-//  same data saved is retrieved.
 passport.deserializeUser(function (id, done) {
     User.findById(id, function (err, user) {
         done(err, user);
@@ -105,8 +110,6 @@ passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: 'http://localhost:3000/auth/google/secrets',
-    // Try deleting this
-    // userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
 },
     // This function is called when we authenticate the user
     function (accessToken, refreshToken, profile, callback) {
@@ -117,12 +120,16 @@ passport.use(new GoogleStrategy({
 ));
 
 
-/* ========= HTTP REQUESTS' HANDLERS ========= */
+
+/* ========= HTTP REQUESTS HANDLERS ========= */
+
+/* --------------- Home page --------------- */
 
 app.get('/', function (req, res) {
     res.render('home');
 });
 
+/* -------- Authentication functions -------- */
 
 app.get('/auth/google',
     passport.authenticate('google', { scope: ['profile'] }));
@@ -148,7 +155,6 @@ app.route('/register')
                 console.log(err);
                 res.redirect('/register');
             } else {
-                console.log('user registered');
                 passport.authenticate('local')(req, res, function () {
                     res.redirect('/secrets');
                 });
@@ -194,6 +200,8 @@ app.get('/logout', function (req, res) {
 })
 
 
+
+/* --------------- Secrets pages --------------- */
 
 app.get('/secrets', function (req, res) {
     if (req.isAuthenticated()) {
