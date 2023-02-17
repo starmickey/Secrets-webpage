@@ -1,3 +1,5 @@
+// ================== IMPORT MODULES ==================
+
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -5,9 +7,12 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 const passportLocalMongoose = require('passport-local-mongoose');
+const findOrCreate = require('mongoose-findorcreate');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 
 
-/* =========== CONFIG EXPRESS APP =========== */
+
+// ================ CONFIG EXPRESS APP ================ 
 
 const app = express();
 
@@ -16,18 +21,22 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.set('view engine', 'ejs');
 
+
+// -------- Make app use passport's session cookies --------
+
 app.use(session({
     secret: 'keyboard cat',
     resave: false,
     saveUninitialized: true,
-    cookie: { }
+    cookie: {}
 }));
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 
-// ================ CONNECT TO MONGOOSE ================
+
+// ============= START MONGOOSE CONNECTION =============
 
 startMongooseConnection().catch(err => console.log(err));
 
@@ -37,11 +46,15 @@ async function startMongooseConnection() {
 }
 
 
-// ================== MODELS & SCHEMAS ==================
+// -------------- Create Models and Schemas --------------
 
 const userSchema = new mongoose.Schema({
+    googleId: String,
     active: Boolean
 });
+
+
+// ----------------- Schema configuration -----------------
 
 userSchema.plugin(passportLocalMongoose, {
     // Set usernameUnique to false to avoid a mongodb index on the username column!
@@ -54,16 +67,54 @@ userSchema.plugin(passportLocalMongoose, {
     }
 });
 
+userSchema.plugin(findOrCreate);
+
+
+// ------------------ Create Schema Model ------------------
+
 const User = mongoose.model('user', userSchema);
 
 
-/*  ---------- Create user sessions ---------- */
+//  ----- Fill passport functions' stack for user sessions ----- 
+
 
 passport.use(User.createStrategy());
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+//  NOTES:
+//  Indicate passport which functions it must call to manage sessions
 
+//  SerializeUser function is used to save user data in some passport session.
+//  This is done when an user logs in.
+//  We can use the argument function to set which user data will be saved.
+passport.serializeUser(function (user, done) {
+    done(null, user.id);
+});
+
+//  DeserializeUser function is executed in every authentication.
+//  It retrieves the user data saved in the session.
+//  Argument function is set according to the one of serializeUser, so the
+//  same data saved is retrieved.
+passport.deserializeUser(function (id, done) {
+    User.findById(id, function (err, user) {
+        done(err, user);
+    });
+});
+
+
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: 'http://localhost:3000/auth/google/secrets',
+    // Try deleting this
+    // userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+},
+    // This function is called when we authenticate the user
+    function (accessToken, refreshToken, profile, callback) {
+        User.findOrCreate({ googleId: profile.id }, function (err, user, created) {
+            return callback(err, user, created);
+        });
+    }
+));
 
 
 /* ========= HTTP REQUESTS' HANDLERS ========= */
@@ -71,6 +122,19 @@ passport.deserializeUser(User.deserializeUser());
 app.get('/', function (req, res) {
     res.render('home');
 });
+
+
+app.get('/auth/google',
+    passport.authenticate('google', { scope: ['profile'] }));
+
+
+app.get('/auth/google/secrets',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    function (req, res) {
+        // Successful authentication
+        res.redirect('/secrets');
+    });
+
 
 app.route('/register')
     .get(function (req, res) {
@@ -85,7 +149,7 @@ app.route('/register')
                 res.redirect('/register');
             } else {
                 console.log('user registered');
-                passport.authenticate('local')(req, res, function(){
+                passport.authenticate('local')(req, res, function () {
                     res.redirect('/secrets');
                 });
             }
@@ -109,7 +173,7 @@ app.route('/login')
             if (err) {
                 console.log(err);
             } else {
-                passport.authenticate('local')(req, res, function(){
+                passport.authenticate('local')(req, res, function () {
                     res.redirect('/secrets');
                 });
             }
@@ -121,13 +185,14 @@ app.route('/login')
 
 app.get('/logout', function (req, res) {
     req.logout(function (err) {
-        if(err) {
+        if (err) {
             console.log(err);
         } else {
             res.redirect('/login');
-        }        
+        }
     })
 })
+
 
 
 app.get('/secrets', function (req, res) {
