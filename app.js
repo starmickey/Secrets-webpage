@@ -93,24 +93,51 @@ app.route('/register')
         });
     });
 
-    
+
 app.route('/login')
     .get(function (req, res) {
         res.render('login');
     })
+
     .post(function (req, res) {
+        const user = new User({
+            username: req.body.username,
+            password: req.body.password
+        });
+
+        req.login(user, function (err) {
+            if (err) {
+                console.log(err);
+            } else {
+                passport.authenticate('local')(req, res, function(){
+                    res.redirect('/secrets');
+                });
+            }
+        })
+
     });
+
+
+
+app.get('/logout', function (req, res) {
+    req.logout(function (err) {
+        if(err) {
+            console.log(err);
+        } else {
+            res.redirect('/login');
+        }        
+    })
+})
 
 
 app.get('/secrets', function (req, res) {
     if (req.isAuthenticated()) {
-        console.log('secrets authentication success');
         res.render('secrets');
     } else {
-        console.log('secrets authentication fault');
         res.redirect('/login');
     }
 })
+
 
 
 /* ============ PORT LISTENER ============ */
